@@ -9,7 +9,7 @@
         />
 
         <h1 class="text-3xl font-black text-[green] tracking-tight">
-          두뇌산책_v1.0
+          두뇌산책_v1.1
         </h1>
         <p class="text-gray-500 text-sm font-medium">
           기억을 잇고, 건강을 걷다
