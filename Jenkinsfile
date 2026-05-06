@@ -123,14 +123,14 @@ pipeline {
                 }
             }
         }
-/*
+
         stage('Trigger k8s-manifests') {
             steps {
                 script {
                     def buildNumber = "${env.BUILD_NUMBER}"
 
                     withEnv(["DOCKER_IMAGE_VERSION=${buildNumber}"]) {
-                        build job: 'university-k8s-manifests',
+                        build job: 'rememberme-devops',
                             parameters: [
                                 string(name: 'DOCKER_IMAGE_VERSION', value: "${DOCKER_IMAGE_VERSION}"),
                                 string(name: 'DID_BUILD_APP', value: "${env.SHOULD_BUILD_APP}"),
@@ -140,7 +140,7 @@ pipeline {
                     }
                 }
             }
-        }*/
+        }
     }
     
 }
