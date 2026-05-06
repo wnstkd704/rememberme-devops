@@ -10,73 +10,93 @@ pipeline {
               containers:
               - name: docker
                 image: docker:29.4.1-cli-alpine3.23
-                command: [- cat]
+                command:
+                - cat
                 tty: true
                 volumeMounts:
-                - mountPath: /var/run/docker.sock
+                - mountPath: "/var/run/docker.sock"
                   name: docker-socket
               volumes:
               - name: docker-socket
                 hostPath:
-                  path: /var/run/docker.sock
+                  path: "/var/run/docker.sock"
             '''
         }
     }
 
+    parameters {
+        string(name: 'DOCKER_IMAGE_VERSION', defaultValue: '', description: 'Docker Image Version')
+        string(name: 'DID_BUILD_APP', defaultValue: '', description: 'Did Build APP')
+        string(name: 'DID_BUILD_API', defaultValue: '', description: 'Did Build API')
+    }
+
     environment {
-        BACKEND_IMAGE = 'junsang704/rememberme-backend'
-        FRONTEND_IMAGE = 'junsang704/rememberme-frontend'
-        DOCKER_CRED_ID = 'dockerhub-access'
-        // SSH Agent에 등록된 GitHub 배포 키 ID (필요시 수정)
-        GITHUB_CRED_ID = 'github-k8s-manifests' 
+        BACKEND_IMAGE_NAME = 'junsang704/rememberme-backend'
+        FRONTEND_IMAGE_NAME = 'junsang704/rememberme-frontend'
+        DOCKER_CREDENTIALS_ID = 'dockerhub-access'
     }
 
     stages {
         stage('Detect Changes') {
             steps {
                 script {
-                    // Git 대소문자 무시 방지 설정
-                    sh 'git config core.ignorecase false'
-                    
-                    // 이전 커밋과 비교하여 변경된 파일 목록 추출
+                    // 현재 커밋과 이전 커밋(HEAD~1) 간의 변경 파일을 가져온다.
                     def changedFiles = sh(script: 'git diff --name-only HEAD~1', returnStdout: true).trim().split("\n")
-                    echo "변경된 파일 목록:\n${changedFiles.join('\n')}"
+
+                    // 전체 배열을 줄바꿈으로 출력
+                    echo "Changed files:\n${changedFiles.join('\n')}"
                     
-                    // 폴더 경로 기반 빌드 대상 결정
+                    // 환경 변수 동적 설정
                     env.SHOULD_BUILD_APP = changedFiles.any { it.startsWith("Frontend/") } ? "true" : "false"
                     env.SHOULD_BUILD_API = changedFiles.any { it.startsWith("Backend/") } ? "true" : "false"
 
-                    echo "프론트 빌드 여부: ${env.SHOULD_BUILD_APP}"
-                    echo "백엔드 빌드 여부: ${env.SHOULD_BUILD_API}"
+                    echo "SHOULD_BUILD_APP : ${SHOULD_BUILD_APP}"
+                    echo "SHOULD_BUILD_API : ${SHOULD_BUILD_API}"
                 }
             }
         }
 
-        stage('Docker Build & Push') {
+        stage('Docker Login') {
             when {
-                expression { return env.SHOULD_BUILD_APP == "true" || env.SHOULD_BUILD_API == "true" }
+                expression { 
+                    return env.SHOULD_BUILD_APP == "true" ||  env.SHOULD_BUILD_API == "true"
+                }
             }
+
             steps {
                 container('docker') {
-                    script {
-                        // 도커 로그인
-                        withCredentials([usernamePassword(credentialsId: DOCKER_CRED_ID, usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                            sh "echo $PASS | docker login -u $USER --password-stdin"
-                        }
+                    sh 'docker logout'
 
-                        // 프론트엔드 빌드
-                        if (env.SHOULD_BUILD_APP == "true") {
-                            dir('Frontend') {
-                                sh "docker build -t ${env.FRONTEND_IMAGE}:${env.BUILD_NUMBER} ."
-                                sh "docker push ${env.FRONTEND_IMAGE}:${env.BUILD_NUMBER}"
-                            }
-                        }
+                    withCredentials([usernamePassword(
+                        credentialsId: DOCKER_CREDENTIALS_ID,
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )]) {
+                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
+                    }
+                }
+            }
+        }
 
-                        // 백엔드 빌드
-                        if (env.SHOULD_BUILD_API == "true") {
-                            dir('Backend') {
-                                sh "docker build -t ${env.BACKEND_IMAGE}:${env.BUILD_NUMBER} ."
-                                sh "docker push ${env.BACKEND_IMAGE}:${env.BUILD_NUMBER}"
+        stage('Frontend Image Build & Push') {
+            when {
+                expression {
+                    return env.SHOULD_BUILD_APP == "true"
+                }
+            }
+
+            steps {
+                container('docker') {
+                    dir('Frontend') {
+                        script {
+                            def buildNumber = "${env.BUILD_NUMBER}"
+
+                            withEnv(["DOCKER_IMAGE_VERSION=${buildNumber}"]) {
+                                sh 'docker -v'
+                                sh 'echo $FRONTEND_IMAGE_NAME:$DOCKER_IMAGE_VERSION'
+                                sh 'docker build --no-cache -t $FRONTEND_IMAGE_NAME:$DOCKER_IMAGE_VERSION ./'
+                                sh 'docker image inspect $FRONTEND_IMAGE_NAME:$DOCKER_IMAGE_VERSION'
+                                sh 'docker push $FRONTEND_IMAGE_NAME:$DOCKER_IMAGE_VERSION'
                             }
                         }
                     }
@@ -84,39 +104,96 @@ pipeline {
             }
         }
 
-        stage('Update K8s Manifests') {
+        stage('Backend Image Build & Push') {
             when {
-                expression { return env.SHOULD_BUILD_APP == "true" || env.SHOULD_BUILD_API == "true" }
+                expression {
+                    return env.SHOULD_BUILD_API == "true"
+                }
             }
+
             steps {
-                script {
-                    // k8s 폴더 내의 배포 파일 태그 업데이트
-                    if (env.SHOULD_BUILD_APP == "true") {
-                        sh "sed -i 's|${env.FRONTEND_IMAGE}:.*|${env.FRONTEND_IMAGE}:${env.BUILD_NUMBER}|g' k8s/frontend/deployment.yaml"
-                    }
-                    if (env.SHOULD_BUILD_API == "true") {
-                        sh "sed -i 's|${env.BACKEND_IMAGE}:.*|${env.BACKEND_IMAGE}:${env.BUILD_NUMBER}|g' k8s/backend/deployment.yaml"
+                container('docker') {
+                    dir('Backend') {
+                        script {
+                            def buildNumber = "${env.BUILD_NUMBER}"
+
+                            withEnv(["DOCKER_IMAGE_VERSION=${buildNumber}"]) {
+                                sh 'docker -v'
+                                sh 'echo $BACKEND_IMAGE_NAME:$DOCKER_IMAGE_VERSION'
+                                sh 'docker build --no-cache -t $BACKEND_IMAGE_NAME:$DOCKER_IMAGE_VERSION ./'
+                                sh 'docker image inspect $BACKEND_IMAGE_NAME:$DOCKER_IMAGE_VERSION'
+                                sh 'docker push $BACKEND_IMAGE_NAME:$DOCKER_IMAGE_VERSION'
+                            }
+                        }
                     }
                 }
             }
         }
 
-        stage('Push Manifests to Git') {
-            when {
-                expression { return env.SHOULD_BUILD_APP == "true" || env.SHOULD_BUILD_API == "true" }
-            }
+        stage('Checkout Main Branches') {
             steps {
-                script {
-                    sh 'git config user.name "jenkins"'
-                    sh 'git config user.email "jenkins@beyond.com"'
-                    sh 'git add k8s/'
-                    sh "git commit -m 'Deploy: Update image version to ${env.BUILD_NUMBER}'"
-                    
-                    sshagent([env.GITHUB_CRED_ID]) {
-                        sh 'git push origin main'
-                    }
+                sh 'git checkout main'
+                echo "DOCKER_IMAGE_VERSION: ${params.DOCKER_IMAGE_VERSION}"
+                echo "DID_BUILD_APP: ${params.DID_BUILD_APP}"
+                echo "DID_BUILD_API: ${params.DID_BUILD_API}"
+            }
+        }
+
+        stage('update Vue rollout.yaml') {
+            when {
+                expression {
+                    return params.DID_BUILD_APP == "true"
+                }
+            }
+
+            steps {
+                dir('university-vue') {
+                    sh 'pwd'
+                    sh 'ls -al'
+                    echo "Received Docker Image Version : ${params.DOCKER_IMAGE_VERSION}"
+                    sh "sed -i 's|junsang704/university-vue:.*|junsang704/university-vue:${params.DOCKER_IMAGE_VERSION}|g' rollout.yaml"
+                    sh 'cat rollout.yaml'
+                }
+            }
+        }
+
+        stage('update API rollout.yaml') {
+            when {
+                expression {
+                    return params.DID_BUILD_API == "true"
+                }
+            }
+
+            steps {
+                dir('department-api') {
+                    sh 'pwd'
+                    sh 'ls -al'
+                    echo "Received Docker Image Version : ${params.DOCKER_IMAGE_VERSION}"
+                    sh "sed -i 's|junsang704/department-service:.*|junsang704/department-service:${params.DOCKER_IMAGE_VERSION}|g' rollout.yaml"
+                    sh 'cat rollout.yaml'
+                }
+            }
+        }
+
+        stage('Commit & Push') {
+            when {
+                expression { 
+                    return params.DID_BUILD_API == "true" ||  params.DID_BUILD_APP == "true"
+                }
+            }
+
+            steps {
+                sh 'git config --list'
+                sh 'git config user.name "jenkins"'
+                sh 'git config user.email "jenkins@beyond.com"'
+                sh 'git config --list'
+                sh "git add ."
+                sh "git commit -m 'Update Image Version ${params.DOCKER_IMAGE_VERSION}'"
+                sh 'git status'
+
+                sshagent(['github-k8s-manifests']) {
+                    sh 'git push'
                 }
             }
         }
     }
-}
