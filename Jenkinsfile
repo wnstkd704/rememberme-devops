@@ -41,8 +41,8 @@ pipeline {
                     echo "Changed files:\n${changedFiles.join('\n')}"
                     
                     // 환경 변수 동적 설정
-                    env.SHOULD_BUILD_APP = changedFiles.any { it.startsWith("university-vue/") } ? "true" : "false"
-                    env.SHOULD_BUILD_API = changedFiles.any { it.startsWith("department-api/") } ? "true" : "false"
+                    env.SHOULD_BUILD_APP = changedFiles.any { it.startsWith("rememberme-frontend/") } ? "true" : "false"
+                    env.SHOULD_BUILD_API = changedFiles.any { it.startsWith("rememberme-backend/") } ? "true" : "false"
 
                     echo "SHOULD_BUILD_APP : ${SHOULD_BUILD_APP}"
                     echo "SHOULD_BUILD_API : ${SHOULD_BUILD_API}"
@@ -123,7 +123,7 @@ pipeline {
                 }
             }
         }
-/*
+        
         stage('Trigger k8s-manifests') {
             steps {
                 script {
@@ -140,7 +140,7 @@ pipeline {
                     }
                 }
             }
-        }*/
+        }
     }
     
 }
