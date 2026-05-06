@@ -41,8 +41,8 @@ pipeline {
                     echo "Changed files:\n${changedFiles.join('\n')}"
                     
                     // 환경 변수 동적 설정
-                    env.SHOULD_BUILD_APP = changedFiles.any { it.contains("Frontend/") } ? "true" : "false"
-                    env.SHOULD_BUILD_API = changedFiles.any { it.contains("Backend/") } ? "true" : "false"
+                    env.SHOULD_BUILD_APP = changedFiles.any { it.startsWith("Frontend/") } ? "true" : "false"
+                    env.SHOULD_BUILD_API = changedFiles.any { it.startsWith("Backend/") } ? "true" : "false"
 
                     echo "SHOULD_BUILD_APP : ${SHOULD_BUILD_APP}"
                     echo "SHOULD_BUILD_API : ${SHOULD_BUILD_API}"
