@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: rememberme-frontend-rollout
+  namespace: rememberme
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: rememberme-frontend
+
+  template:
+    metadata:
+      labels:
+        app: rememberme-frontend
+
+    spec:
+      containers:
+      - name: rememberme-frontend
+        image: junsang704/rememberme-frontend:latest
+
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
+
+        ports:
+        - containerPort: 80
+
+  strategy:
+    blueGreen:
+      activeService: rememberme-frontend-active
+      previewService: rememberme-frontend-preview
+
+      autoPromotionEnabled: true
+      autoPromotionSeconds: 30
+      scaleDownDelaySeconds: 30

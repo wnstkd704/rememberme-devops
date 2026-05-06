@@ -1,0 +1,72 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: rememberme-backend-rollout
+  namespace: rememberme
+
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: rememberme-backend
+
+  template:
+    metadata:
+      labels:
+        app: rememberme-backend
+
+    spec:
+      containers:
+      - name: rememberme-backend
+
+        # Jenkins가 push 하는 Docker Hub 이미지
+        image: junsang704/rememberme-backend:latest
+
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+        ports:
+        - containerPort: 8088
+
+        startupProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8088
+
+          failureThreshold: 10
+          periodSeconds: 10
+
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8088
+
+          initialDelaySeconds: 10
+          periodSeconds: 20
+
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8088
+
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+  strategy:
+    blueGreen:
+
+      # 실제 사용자 트래픽
+      activeService: rememberme-backend-active
+
+      # 새 버전 테스트용
+      previewService: rememberme-backend-preview
+
+      # true면 자동 배포 전환
+      autoPromotionEnabled: false
