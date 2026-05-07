@@ -187,9 +187,15 @@ pipeline {
                 '''
 
                 sshagent([GITHUB_CREDENTIALS_ID]) {
-                    sh 'git checkout -b manifest'
+                    // 1. manifest 브랜치가 이미 있으면 체크아웃, 없으면 생성
+                    sh 'git checkout manifest || git checkout -b manifest'
+                    
+                    // 2. 원격의 최신 내용을 가져와서 현재 커밋을 그 위로 재배치 (충돌 해결 핵심)
+                    // 만약 원격에 브랜치가 아예 없다면 에러가 날 수 있으므로 || true 처리
+                    sh 'git pull origin manifest --rebase || true'
+                    
+                    // 3. 푸시 시도
                     sh 'git push origin manifest'
-                    sh 'git checkout main'
                 }
             }
         }
