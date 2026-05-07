@@ -89,17 +89,15 @@ pipeline {
             steps {
                 container('docker') {
                     dir('Frontend') {
-                        script {
-                            def buildNumber = "${env.BUILD_NUMBER}"
+                        sh """
+                        docker build --no-cache \
+                          -t ${FRONTEND_IMAGE_NAME}:${BUILD_NUMBER} \
+                          -t ${FRONTEND_IMAGE_NAME}:latest \
+                          .
+                        """
 
-                            withEnv(["DOCKER_IMAGE_VERSION=${buildNumber}"]) {
-                                sh 'docker -v'
-                                sh 'echo $APP_IMAGE_NAME:$DOCKER_IMAGE_VERSION'
-                                sh 'docker build --no-cache -t $APP_IMAGE_NAME:$DOCKER_IMAGE_VERSION ./'
-                                sh 'docker image inspect $APP_IMAGE_NAME:$DOCKER_IMAGE_VERSION'
-                                sh 'docker push $APP_IMAGE_NAME:$DOCKER_IMAGE_VERSION'
-                            }
-                        }
+                        sh "docker push ${FRONTEND_IMAGE_NAME}:${BUILD_NUMBER}"
+                        sh "docker push ${FRONTEND_IMAGE_NAME}:latest"
                     }
                 }
             }
@@ -115,17 +113,17 @@ pipeline {
             steps {
                 container('docker') {
                     dir('Backend') {
-                        script {
-                            def buildNumber = "${env.BUILD_NUMBER}"
+                        sh """
+                        docker build --no-cache \
+                          --build-arg BUILD_PROFILE=local \
+                          --build-arg BUILD_PORT=8088 \
+                          -t ${BACKEND_IMAGE_NAME}:${BUILD_NUMBER} \
+                          -t ${BACKEND_IMAGE_NAME}:latest \
+                          .
+                        """
 
-                            withEnv(["DOCKER_IMAGE_VERSION=${buildNumber}"]) {
-                                sh 'docker -v'
-                                sh 'echo $API_IMAGE_NAME:$DOCKER_IMAGE_VERSION'
-                                sh 'docker build --no-cache -t $API_IMAGE_NAME:$DOCKER_IMAGE_VERSION ./'
-                                sh 'docker image inspect $API_IMAGE_NAME:$DOCKER_IMAGE_VERSION'
-                                sh 'docker push $API_IMAGE_NAME:$DOCKER_IMAGE_VERSION'
-                            }
-                        }
+                        sh "docker push ${BACKEND_IMAGE_NAME}:${BUILD_NUMBER}"
+                        sh "docker push ${BACKEND_IMAGE_NAME}:latest"
                     }
                 }
             }
