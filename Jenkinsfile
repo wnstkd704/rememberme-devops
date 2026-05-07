@@ -130,48 +130,48 @@ pipeline {
         }
 
         stage('Update k8s Image Tag') {
-    when {
-        expression {
-            return env.SHOULD_BUILD_APP == "true" ||
-                   env.SHOULD_BUILD_API == "true"
-        }
-    }
-
-    steps {
-        script {
-
-            if (env.SHOULD_BUILD_APP == "true") {
-
-                echo "Update Frontend rollout.yaml"
-
-                sh """
-                sed -i 's|image: ${FRONTEND_IMAGE_NAME}:.*|image: ${FRONTEND_IMAGE_NAME}:${BUILD_NUMBER}|g' \
-                k8s/frontend/rollout.yaml
-                """
-
-                sh 'cat k8s/frontend/rollout.yaml'
+            when {
+                expression {
+                    return env.SHOULD_BUILD_APP == "true" ||
+                        env.SHOULD_BUILD_API == "true"
+                }
             }
 
-            if (env.SHOULD_BUILD_API == "true") {
+            steps {
+                script {
 
-                echo "Update Backend rollout.yaml"
+                    if (env.SHOULD_BUILD_APP == "true") {
 
-                sh """
-                sed -i 's|image: ${BACKEND_IMAGE_NAME}:.*|image: ${BACKEND_IMAGE_NAME}:${BUILD_NUMBER}|g' \
-                k8s/backend/rollout.yaml
-                """
+                        echo "Update Frontend rollout.yaml"
 
-                sh 'cat k8s/backend/rollout.yaml'
+                        sh """
+                        sed -i 's|image: ${FRONTEND_IMAGE_NAME}:.*|image: ${FRONTEND_IMAGE_NAME}:${BUILD_NUMBER}|g' \
+                        k8s/frontend/rollout.yaml
+                        """
+
+                        sh 'cat k8s/frontend/rollout.yaml'
+                    }
+
+                    if (env.SHOULD_BUILD_API == "true") {
+
+                        echo "Update Backend rollout.yaml"
+
+                        sh """
+                        sed -i 's|image: ${BACKEND_IMAGE_NAME}:.*|image: ${BACKEND_IMAGE_NAME}:${BUILD_NUMBER}|g' \
+                        k8s/backend/rollout.yaml
+                        """
+
+                        sh 'cat k8s/backend/rollout.yaml'
+                    }
+                }
             }
         }
-    }
-}
 
         stage('Commit & Push k8s Changes') {
             when {
                 expression {
                     return env.SHOULD_BUILD_APP == "true" ||
-                           env.SHOULD_BUILD_API == "true"
+                        env.SHOULD_BUILD_API == "true"
                 }
             }
 
@@ -187,7 +187,11 @@ pipeline {
                 '''
 
                 sshagent([GITHUB_CREDENTIALS_ID]) {
-                    sh 'git push'
+
+                    sh 'git status'
+                    sh 'git branch -a'
+
+                    sh 'git push origin HEAD:main'
                 }
             }
         }
