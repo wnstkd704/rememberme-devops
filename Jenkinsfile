@@ -187,7 +187,9 @@ pipeline {
                 '''
 
                 sshagent([GITHUB_CREDENTIALS_ID]) {
-                    sh 'git push origin main'
+                    sh 'git status'
+                    sh 'git branch -a'
+                    sh 'git push origin HEAD:main'
                 }
             }
         }
