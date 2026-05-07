@@ -57,10 +57,10 @@ desktop.ini
 # Secrets & Configuration (보안 필수 🛡️)
 # ==========================================================================
 # DB 정보나 API 키가 포함된 설정 파일은 제외합니다.
-src/main/resources/application-local.yml
-src/main/resources/application-secret.yml
-src/main/resources/application-local.properties
-src/main/resources/application-secret.properties
+**/src/main/resources/application-local.yml
+**/src/main/resources/application-secret.yml
+**/src/main/resources/application-local.properties
+**/src/main/resources/application-secret.properties
 
 # ==========================================================================
 # MyBatis Specific
