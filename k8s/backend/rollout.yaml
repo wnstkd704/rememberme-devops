@@ -21,7 +21,7 @@ spec:
       - name: rememberme-backend
 
         # Jenkins가 push 하는 Docker Hub 이미지
-        image: junsang704/rememberme-backend:latest
+        image: junsang704/rememberme-backend:40
 
         resources:
           requests:
