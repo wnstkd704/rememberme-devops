@@ -183,7 +183,7 @@ pipeline {
 
                 sh '''
                 git diff --cached --quiet || \
-                git commit -m "chore: update image version ${BUILD_NUMBER}"
+                git commit -m "chore: update image version ${BUILD_NUMBER} [skip ci]"
                 '''
 
                 sshagent([GITHUB_CREDENTIALS_ID]) {
