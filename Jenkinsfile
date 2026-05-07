@@ -189,9 +189,9 @@ pipeline {
                 '''
 
                 sshagent([GITHUB_CREDENTIALS_ID]) {
-                    git checkout -b manifest
-                    git push origin manifest
-                    git checkout main
+                    sh 'git checkout -b manifest'
+                    sh 'git push origin manifest'
+                    sh 'git checkout main'
                 }
             }
         }
