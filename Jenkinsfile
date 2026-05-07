@@ -27,7 +27,7 @@ pipeline {
     environment {
         BACKEND_IMAGE_NAME = 'junsang704/rememberme-backend'
         FRONTEND_IMAGE_NAME = 'junsang704/rememberme-frontend'
-        DOCKER_CREDENTIALS_ID = 'dockerhub-access'
+        DOCKER_CREDENTIALS_ID = 'dockerhub-access-rememberme'
         GITHUB_CREDENTIALS_ID = 'github-rememberme-devops'
     }
 
