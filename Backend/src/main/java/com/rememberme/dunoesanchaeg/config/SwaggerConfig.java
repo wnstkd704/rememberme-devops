@@ -17,7 +17,7 @@ public class SwaggerConfig {
 				.info(new Info()
 						.title("두뇌산책 API 명세서")
 						.description("시니어 루틴 관리 서비스 '두뇌산책'의 백엔드 API 문서입니다.")
-						.version("v3.1.6"))
+						.version("v3.1.7"))
 				// JWT 인증 버튼 활성화 설정
 				.addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
 				.components(new Components()
