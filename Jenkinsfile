@@ -28,7 +28,7 @@ pipeline {
         BACKEND_IMAGE_NAME = 'junsang704/rememberme-backend'
         FRONTEND_IMAGE_NAME = 'junsang704/rememberme-frontend'
         DOCKER_CREDENTIALS_ID = 'dockerhub-access'
-        GITHUB_CREDENTIALS_ID = 'github-k8s-manifests'
+        GITHUB_CREDENTIALS_ID = 'github-rememberme-devops'
     }
 
     stages {
